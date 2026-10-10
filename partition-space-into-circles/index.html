@@ -460,22 +460,23 @@ SC.push({
   readout(){const d=2*Math.tan(this.th/2);
     return 'P 离桌面的高度：'+fmt(this.P[2])+'（灯的高度是 2）<br>影子 P′ 到球底的距离：<strong>'+fmt(d)+'</strong>'+(d>BOX.x1?'<span class="dim">（已经跑出纸面）</span>':'');}
 });
-/* 3 — a circle casts a circle (with an optional proof overlay: the tangent "hat" and its tip T) */
+/* 3 — a circle casts a circle. Two optional proof overlays: 'proof' (tangent hat with tip T) and 'conv' (the converse, via three points) */
 SC.push({
   cam:{az:-60,el:24,hw:4.7,t:[0.5,0,0.6]},
   proofCam:{az:-35,el:22,hw:3.3,t:[0.9,0,0.75]},
-  enter(){world1();this.t=0;this.a=fromAngles(55*RAD,-1);this.proof=false;},
-  setProof(on){
-    this.proof=on;
-    if(on){this.a=fromAngles(70*RAD,0.3);rho3.value=30;}
-    goCam(on?this.proofCam:this.cam,!playing);
+  convCam:{az:-40,el:26,hw:3.6,t:[0.8,0,0.6]},
+  enter(){world1();this.t=0;this.a=fromAngles(55*RAD,-1);this.mode='';},
+  setMode(m){
+    this.mode=m;
+    if(m){this.a=fromAngles(70*RAD,0.3);rho3.value=30;}
+    goCam(m==='proof'?this.proofCam:m==='conv'?this.convCam:this.cam,!playing);
   },
   update(dt,auto){
-    if(auto&&!this.proof){this.t+=dt;this.a=fromAngles((62+22*Math.sin(0.4*this.t-0.3))*RAD,-1+0.35*this.t);}
+    if(auto&&!this.mode){this.t+=dt;this.a=fromAngles((62+22*Math.sin(0.4*this.t-0.3))*RAD,-1+0.35*this.t);}
     this.rho=+rho3.value*RAD; this.circ=sphCircle(this.a,this.rho,120); this.sh=this.circ.map(st);
     const s=this.sh; this.cc=(s[0]&&s[40]&&s[80])?circum(s[0],s[40],s[80]):null; if(this.cc&&this.cc.r>60) this.cc=null;
-    this.pf=null;
-    if(this.proof){
+    this.pf=null; this.cv=null;
+    if(this.mode==='proof'){
       const a=this.a,[e1,e2]=basis(a),w=clock*0.5,c=Math.cos(this.rho),sn=Math.sin(this.rho);
       const T=add(SPH.c,mul(a,1/c)), k=2-T[2];                       // tip of the tangent cone
       const P=[0,1,2].map(j=>SPH.c[j]+c*a[j]+sn*(Math.cos(w)*e1[j]+Math.sin(w)*e2[j])), Pq=st(P);
@@ -484,19 +485,29 @@ SC.push({
         this.pf={T,Tq:[2*T[0]/k,2*T[1]/k,0],P,Pq,P2:[u*P[0],u*P[1],2+u*(P[2]-2)]};
       }
     }
+    if(this.mode==='conv'&&this.cc){
+      // three wandering points on the red circle; the blue circle is rebuilt from their three preimages alone
+      const c=this.cc,k=clock,ws=[0.3*k,2.1+0.3*k+0.6*Math.sin(0.5*k),4.2+0.3*k+0.6*Math.sin(0.37*k+1)];
+      const q=ws.map(w=>[c.c[0]+c.r*Math.cos(w),c.c[1]+c.r*Math.sin(w),0]), X=q.map(stInv);
+      let n=norm(cross(sub(X[1],X[0]),sub(X[2],X[0]))), d=dot(n,sub(X[0],SPH.c));
+      if(d<0){n=mul(n,-1);d=-d;}
+      const circ=sphCircle(n,Math.acos(clamp(d,-1,1)),120), sh=circ.map(st);
+      const c2=(sh[0]&&sh[40]&&sh[80])?circum(sh[0],sh[40],sh[80]):null;
+      this.cv={q,X,circ,r2:c2?c2.r:NaN};
+    }
   },
   handles(){return [{id:'A',p:onS(this.a)}];},
   drag(id,x,y){this.a=capNorth(hitSphere(x,y));},
   table(){
     tableLine(this.sh,true,COL.shadow,3.2,1);
     if(this.pf){tableLine([this.pf.Tq,this.pf.Pq],false,COL.ink,2.4,1);}
-    else if(this.cc){const c=this.cc,w=clock*1.1,tip=[c.c[0]+c.r*Math.cos(w),c.c[1]+c.r*Math.sin(w),0];
+    else if(this.cc&&!this.cv){const c=this.cc,w=clock*1.1,tip=[c.c[0]+c.r*Math.cos(w),c.c[1]+c.r*Math.sin(w),0];
       tableLine(flatCircle(c.c,c.r,120),true,COL.ink,1.2,0.75,[4,5]);
       tableLine([c.c,tip],false,COL.ink,1.4,0.85); dot3(c.c,COL.ink,3.5); dot3(tip,COL.ink,3);}
   },
-  sphere(){sphLine(this.circ,true,COL.ball,3.2,1,0.4);},
+  sphere(){sphLine(this.cv?this.cv.circ:this.circ,true,COL.ball,3.2,1,0.4);},
   over(){
-    const f=this.pf;
+    const f=this.pf, v=this.cv;
     if(f){
       ctx.beginPath(); for(let i=0;i<120;i+=8) line3(f.T,this.circ[i]); stroke(COL.ball,1,0.45);
       const s=[f.T,f.P,f.P2].map(proj);
@@ -509,6 +520,13 @@ SC.push({
       dot3(f.T,COL.ink,4); dot3(f.Tq,COL.ink,4); dot3(f.P2,COL.ink,3.5); dot3(f.P,COL.ball,5); dot3(f.Pq,COL.shadow,5);
       label(f.T,'T',12,-12); label(f.Tq,'T′',-4,20); label(f.P2,'P″',18,-4);
       label(f.P,'P',-14,-6,COL.ball); label(f.Pq,'P′',8,20,COL.shadow);
+    }else if(v){
+      const s=v.X.map(proj);                                         // the plane through the three blue points
+      ctx.beginPath();ctx.moveTo(s[0][0],s[0][1]);ctx.lineTo(s[1][0],s[1][1]);ctx.lineTo(s[2][0],s[2][1]);ctx.closePath();
+      ctx.globalAlpha=0.18;ctx.fillStyle=COL.ball;ctx.fill();ctx.globalAlpha=1;stroke(COL.ball,1.2,0.8);
+      ctx.beginPath(); v.q.forEach(q=>line3(NP,q)); stroke(COL.lamp,1.6,0.9);
+      lamp(NP);
+      v.X.forEach(p=>dot3(p,COL.ball,5)); v.q.forEach(q=>dot3(q,COL.shadow,5));
     }else{
       ctx.beginPath(); for(let i=0;i<120;i+=6){const q=this.sh[i]; if(q&&Math.hypot(q[0],q[1])<12) line3(NP,q);} stroke(COL.lamp,1,0.34);
       lamp(NP);
@@ -518,6 +536,7 @@ SC.push({
   readout(){
     const f=this.pf;
     if(f) return 'TP = '+fmt(len(sub(f.T,f.P)))+'，TP″ = '+fmt(len(sub(f.T,f.P2)))+'，两条边相等。<br>T′P′ = <strong>'+fmt(len(sub(f.Tq,f.Pq)))+'</strong>，P 绕一整圈都不变。';
+    if(this.cv) return '三个蓝点确定的圆，影子的半径：<strong>'+fmt(this.cv.r2)+'</strong><br>原来红圆的半径：<strong>'+fmt(this.cc.r)+'</strong>。三个红点怎么移动，两个圆都重合。';
     return this.cc?('影子圆的半径：<strong>'+fmt(this.cc.r)+'</strong><br><span class="dim">圆规的针尖转一整圈，始终压在红线上。</span>'):'影子太大，跑出纸面了。';
   }
 });
@@ -644,17 +663,25 @@ const STEPS=[
   body:`<p>在球面上画一个<b class="c-ball">圆</b>，让灯光把它整个照到桌面上。</p>
 <p><b class="c-shadow">影子</b>被放大了，位置也偏了，可它依然是一个标准的圆。用圆规检验一下：虚线是圆规画出的圆，红色的影子和它完全重合。</p>
 <p>这是球极投影最重要的性质：<strong>球面上的圆，影子还是圆。</strong>反过来也对：桌面上的每一个圆，都是球面上某个圆的影子。第 5 步要用的是这个方向。</p>
-<details class="proof" id="proof3"><summary>想看证明</summary>
+<details class="proof" id="proof3"><summary>想看证明：圆的影子是圆</summary>
 <ol>
 <li>给蓝圆戴一顶尖帽子：过圆上每一点作球的切线，这些切线交于帽尖 ${M('T')}。从 ${M('T')} 到圆上各点的切线长都相等。</li>
 <li>连接 ${M('N')}、${M('T')} 并延长，交桌面于 ${M('T′')}。</li>
 <li>在圆上任取一点 ${M('P')}，影子是 ${M('P′')}。过 ${M('T')} 作桌面的平行线，交直线 ${M('NP')} 于 ${M('P″')}。在 ${M('N')}、${M('T')}、${M('P')} 所在的平面里，球被切出一个经过 ${M('N')} 和 ${M('P')} 的圆，${M('TP')} 是它在 ${M('P')} 处的切线；它在 ${M('N')} 处的切线和桌面平行，也就和 ${M('TP″')} 平行。弦 ${M('NP')} 两端的切线与弦的夹角相等，所以三角形 ${M('TPP″')} 的两个底角相等，${M('TP″')} = ${M('TP')}。</li>
 <li>${M('TP″')} 和 ${M('T′P′')} 平行，所以三角形 ${M('NTP″')} 和 ${M('NT′P′')} 相似，${M('T′P′')} = ${M('TP″')} × ${M('NT′')} ÷ ${M('NT')}。右边三个量都和 ${M('P')} 的位置无关，所以每个影子到 ${M('T′')} 的距离都相等，影子是以 ${M('T′')} 为圆心的圆。</li>
 </ol>
-<p>反过来：在桌面的圆上取三个点，它们在球面上对应的三个点确定球面上的一个圆。这个圆的影子是经过那三个点的圆，而三点只能确定一个圆，所以它的影子就是原来那个圆。</p>
 <p class="note">蓝圆是大圆（把球切成相等两半的圆）时没有帽尖，切线互相平行，证明要稍作改动，结论不变。</p>
+</details>
+<details class="proof" id="proof3b"><summary>想看证明：反过来也对</summary>
+<ol>
+<li>桌面上有一个<b class="c-shadow">红圆</b>，要证明它是球面上某个圆的影子。在红圆上任取三个红点，每个红点都是球面上一个点的影子，顺着灯光把这三个蓝点找出来。</li>
+<li>不在一条直线上的三个点确定一张平面，就是图中的蓝色三角形所在的平面。平面切球面，切口是一个圆，这就是经过三个蓝点的<b class="c-ball">蓝圆</b>。</li>
+<li>蓝圆的影子经过那三个红点。由上一个证明，这个影子是一个圆。它不会是直线，因为三个红点不在一条直线上。</li>
+<li>经过三个点的圆只有一个，所以蓝圆的影子就是原来的红圆。</li>
+</ol>
+<p class="note">图上的三个红点一直在红圆上移动，而它们确定的蓝圆始终是同一个。</p>
 </details>`,
-  tip:'试一试：拖动球面上的空心圆点移动这个圆，用滑块改变它的大小。展开证明后，图上会画出帽子和那个等腰三角形。'},
+  tip:'试一试：拖动球面上的空心圆点移动这个圆，用滑块改变它的大小。展开任何一个证明，图上会换成对应的图形。'},
  {title:'穿过灯的圆，影子是直线',legend:L1,ctl:['ctl-rho4','through'],
   body:`<p>上一步有一个例外。把圆慢慢推向灯：圆上离灯最近的点，影子跑得最远，所以影子圆越来越大。</p>
 <p>当圆正好穿过 ${M('N')} 时，${M('N')} 没有影子，影子圆在无穷远处断开，变成一条<strong>直线</strong>。可以把直线看成半径无穷大的圆。</p>
@@ -710,8 +737,11 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowRight') setScene(scene+1); else if(e.key==='ArrowLeft') setScene(scene-1);
 });
 
-document.addEventListener('toggle',e=>{                    // the proof in step 3 switches the drawing too
-  if(e.target.id==='proof3'&&scene===2) SC[2].setProof(e.target.open);
+document.addEventListener('toggle',e=>{                    // each proof in step 3 switches the drawing; only one stays open
+  const id=e.target.id; if(scene!==2||(id!=='proof3'&&id!=='proof3b')) return;
+  const mode=id==='proof3'?'proof':'conv';
+  if(e.target.open){const other=$(id==='proof3'?'proof3b':'proof3'); if(other) other.open=false; SC[2].setMode(mode);}
+  else if(SC[2].mode===mode) SC[2].setMode('');
 },true);
 
 /* ---------- pointer: drag a dot, or drag empty space to orbit ---------- */
