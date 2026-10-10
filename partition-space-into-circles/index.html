@@ -139,7 +139,7 @@ h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:1.75rem;li
       <span class="group-label">认识球极投影</span>
       <div class="group-row">
         <button class="step" data-step="0"><span class="n">1</span><span class="lbl">灯和影子</span></button>
-        <button class="step" data-step="1"><span class="n">2</span><span class="lbl">越近越远</span></button>
+        <button class="step" data-step="1"><span class="n">2</span><span class="lbl">灯没有影子</span></button>
         <button class="step" data-step="2"><span class="n">3</span><span class="lbl">圆变圆</span></button>
         <button class="step" data-step="3"><span class="n">4</span><span class="lbl">圆变直线</span></button>
         <button class="step" data-step="4"><span class="n">5</span><span class="lbl">铺满球面</span></button>
@@ -428,39 +428,33 @@ SC.push({
   readout(){const d=Math.hypot(this.Q[0],this.Q[1]);
     return 'P 离桌面的高度：'+fmt(this.P[2])+'<br>影子 P′ 到球底的距离：'+fmt(d);}
 });
-/* 2 — nearer the lamp, farther the shadow (side view, similar triangles) */
+/* 2 — side view: the nearer the lamp, the farther the shadow; N itself has none */
 SC.push({
   cam:{az:-90,el:7,hw:4.3,t:[2,0,0.8]},
   enter(){world1();this.t=0;this.th=30*RAD;},
   update(dt,auto){
-    if(auto){this.t+=dt;this.th=(86-56*Math.cos(0.45*this.t-0.9))*RAD;}
-    this.P=[Math.sin(this.th),0,1-Math.cos(this.th)]; this.Q=[2*Math.tan(this.th/2),0,0]; this.Hp=[0,0,this.P[2]];
+    if(auto){this.t+=dt;this.th=(90-86*Math.cos(0.4*this.t-0.8))*RAD;}
+    this.P=[Math.sin(this.th),0,1-Math.cos(this.th)]; this.Q=[2*Math.tan(this.th/2),0,0];
   },
   handles(){return [{id:'P',p:this.P},{id:'Q',p:this.Q}];},
   drag(id,x,y){
-    if(id==='P'){const u=hitSphere(x,y); this.th=clamp(Math.atan2(u[0],-u[2]),3*RAD,172*RAD);}
-    else{const q=hitTable(x,y); if(q) this.th=clamp(2*Math.atan(q[0]/2),3*RAD,172*RAD);}
+    if(id==='P'){const u=hitSphere(x,y); this.th=clamp(Math.atan2(u[0],-u[2]),3*RAD,177*RAD);}
+    else{const q=hitTable(x,y); if(q) this.th=clamp(2*Math.atan(q[0]/2),3*RAD,177*RAD);}
   },
   table(){
     for(let k=1;k<=7;k++){const q=[2*Math.tan(k*10*RAD),0,0]; if(q[0]<BOX.x1) dot3(q,COL.shadow,3);}
-    tableLine([SP,this.Q],false,COL.shadow,3,1);
   },
   sphere(){sphLine(meridian([1,0,0]),true,COL.ball,2,0.9,0.4);},
   over(){
-    const tri=(a,b,c,al)=>{const s=[a,b,c].map(proj); if(s.some(p=>p[2]<1)) return;
-      ctx.beginPath();ctx.moveTo(s[0][0],s[0][1]);ctx.lineTo(s[1][0],s[1][1]);ctx.lineTo(s[2][0],s[2][1]);ctx.closePath();ctx.globalAlpha=al;ctx.fillStyle=COL.lamp;ctx.fill();ctx.globalAlpha=1;};
-    tri(NP,SP,this.Q,0.1); tri(NP,this.Hp,this.P,0.22);
     for(let k=1;k<=8;k++){const t=k*20*RAD,p=[Math.sin(t),0,1-Math.cos(t)],q=[2*Math.tan(t/2),0,0];
       if(q[0]<BOX.x1){ctx.beginPath();line3(NP,q);stroke(COL.lamp,1,0.3);} dot3(p,COL.ball,3);}
-    ctx.beginPath();line3(NP,SP);line3(this.Hp,this.P);stroke(COL.ink,1.2,0.7,[5,5]);
+    ctx.beginPath();line3(NP,[9,0,2]);stroke(COL.lamp,1.4,0.8,[6,6]);   // the ray P never reaches: parallel to the table
     lightRay(this.Q,0.95,1.8); lamp(NP);
-    dot3(SP,COL.ink,3.5); dot3(this.Hp,COL.ink,3.5);
     dot3(this.P,COL.ball,6,false,true); dot3(this.Q,COL.shadow,6,false,true);
-    label(NP,'N',-4,-22); label(SP,'S',-4,18); label(this.Hp,'H',-16,0);
-    label(this.P,'P',16,-8,COL.ball); label(this.Q,'P′',4,22,COL.shadow);
+    label(NP,'N',-4,-22); label(this.P,'P',16,-8,COL.ball); label(this.Q,'P′',4,22,COL.shadow);
   },
-  readout(){const hp=Math.sin(this.th),nh=1+Math.cos(this.th),k=Math.tan(this.th/2);
-    return '小三角形：HP ÷ NH = '+fmt(hp)+' ÷ '+fmt(nh)+' = <strong>'+fmt(k)+'</strong><br>大三角形：SP′ ÷ NS = '+fmt(2*k)+' ÷ 2 = <strong>'+fmt(k)+'</strong>';}
+  readout(){const d=2*Math.tan(this.th/2);
+    return 'P 离桌面的高度：'+fmt(this.P[2])+'（灯的高度是 2）<br>影子 P′ 到球底的距离：<strong>'+fmt(d)+'</strong>'+(d>BOX.x1?'<span class="dim">（已经跑出纸面）</span>':'');}
 });
 /* 3 — a circle casts a circle */
 SC.push({
@@ -600,11 +594,11 @@ const STEPS=[
 <p>用这种办法把球面上的点一个个搬到平面上，就叫<strong>球极投影</strong>。</p>
 <p class="note">桌面不一定要贴着球。换成任何一张与它平行、又不经过灯的平面都行，比如穿过球心的，或者离球更远的。所有影子只是整体放大或缩小，后面讲的性质都不变。</p>`,
   tip:'试一试：拖动蓝点在球面上画画，或者拖动红点，看另一个点怎么跟着走。'},
- {title:'离灯越近，影子越远',legend:L1,ctl:[],
-  body:`<p>换到侧面看。${M('P')} 在球底 ${M('S')} 时，影子就在原地。${M('P')} 越往上爬，光线越平，影子跑得越远。球面上间隔相等的小蓝点，影子的间隔越来越大。</p>
-<p>影子的位置可以用相似三角形算出来。直角三角形 ${M('NHP')} 和 ${M('NSP′')} 共用 ${M('N')} 处的角，形状相同，所以对应边的比相等。</p>
-<p>${M('P')} 爬到 ${M('N')} 时，光线和桌面平行，永远落不到桌面上。${M('N')} 是球面上唯一没有影子的点。除了它，球面上的点和桌面上的点一一对应。</p>`,
-  tip:'试一试：沿着球面拖动蓝点，下面两个比值始终相等。'},
+ {title:'只有灯自己没有影子',legend:L1,ctl:[],
+  body:`<p>换到侧面看。${M('P')} 越往上爬，离灯越近，光线越平，影子跑得越远。</p>
+<p>${M('P')} 爬到 ${M('N')} 时，光线变得和桌面平行，就是图中那条虚线，永远落不到桌面上。所以 <strong>${M('N')} 是球面上唯一没有影子的点</strong>。</p>
+<p>除了 ${M('N')}，球面上每个点都有一个影子。反过来，桌面上每个点也恰好是球面上某一个点的影子。也就是说，<strong>去掉 ${M('N')} 的球面和桌面一一对应</strong>。后面解题要用的就是这两条。</p>`,
+  tip:'试一试：沿着球面把蓝点拖向灯，看影子能跑多远。'},
  {title:'圆的影子还是圆',legend:L1,ctl:['ctl-rho3'],
   body:`<p>在球面上画一个<b class="c-ball">圆</b>，让灯光把它整个照到桌面上。</p>
 <p><b class="c-shadow">影子</b>被放大了，位置也偏了，可它依然是一个标准的圆。用圆规检验一下：虚线是圆规画出的圆，红色的影子和它完全重合。</p>
