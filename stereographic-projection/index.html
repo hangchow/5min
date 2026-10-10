@@ -1,0 +1,703 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="用七步可交互动画讲清球极投影，并用它回答：三维空间能不能分割成圆？">
+<title>球极投影动画</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&family=ZCOOL+XiaoWei&family=STIX+Two+Text:ital,wght@0,500;1,500&display=swap" media="print" onload="this.media='all'">
+<style>
+/* Layout: a lab bench. One stage on the left that all seven steps reuse; the words sit beside it.
+   Colour is a code kept everywhere: blue = on the sphere, rose = on the flat plane, amber = light. */
+:root{
+  --bg:#F1F4F7; --stage:#E3E9F0; --paper:#FCFDFE; --grid:#B7C6D6; --line:#CDD6E0;
+  --ink:#16223A; --muted:#56657C;
+  --ball:#2553C7; --shadow:#D1285F; --lamp:#D08A00; --lamp-ink:#8F5600;
+  --font-display:"ZCOOL XiaoWei","Songti SC","STSong",serif;
+  --font-body:"Noto Sans SC","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  --font-math:"STIX Two Text","Times New Roman",serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0D1320; --stage:#080D17; --paper:#141D30; --grid:#2C3B57; --line:#26324A;
+    --ink:#E8EDF6; --muted:#97A5BD;
+    --ball:#8BADFF; --shadow:#FF7AA2; --lamp:#FFC455; --lamp-ink:#FFC455;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1320; --stage:#080D17; --paper:#141D30; --grid:#2C3B57; --line:#26324A;
+  --ink:#E8EDF6; --muted:#97A5BD;
+  --ball:#8BADFF; --shadow:#FF7AA2; --lamp:#FFC455; --lamp-ink:#FFC455;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{color-scheme:light}
+body{margin:0}
+img{max-width:100%}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.75}
+.wrap{max-width:1120px;margin:0 auto;padding-inline:20px;padding-block:36px 64px;display:flex;flex-direction:column;gap:28px}
+.m{font-family:var(--font-math);font-style:italic;font-weight:500;font-size:1.08em;line-height:1}
+.c-ball{color:var(--ball)} .c-shadow{color:var(--shadow)} .c-lamp{color:var(--lamp-ink);font-weight:500}
+
+.masthead{display:flex;flex-direction:column;gap:6px;max-width:46rem}
+.eyebrow{margin:0;font-size:.875rem;color:var(--muted);letter-spacing:.06em}
+h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(2rem,5.4vw,3.1rem);line-height:1.2;text-wrap:balance}
+.lede{margin:6px 0 0;color:var(--muted)}
+
+.steps{display:flex;flex-wrap:wrap;gap:12px 32px}
+.group{display:flex;flex-direction:column;gap:6px;min-width:0}
+.group-label{font-size:.75rem;color:var(--muted);letter-spacing:.1em}
+.group-row{display:flex;flex-wrap:wrap;gap:6px}
+.step{font:inherit;font-size:.875rem;line-height:1;color:var(--ink);background:transparent;border:1px solid var(--line);
+  border-radius:999px;padding:4px 12px 4px 4px;display:inline-flex;align-items:center;gap:8px;cursor:pointer}
+.step .n{width:24px;height:24px;border-radius:50%;background:var(--stage);display:grid;place-items:center;
+  font-size:.8125rem;font-variant-numeric:tabular-nums}
+.step:hover{border-color:var(--muted)}
+.step[aria-current="step"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.step[aria-current="step"] .n{background:var(--bg);color:var(--ink)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--ball);outline-offset:2px}
+
+.bench{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:32px;align-items:start}
+.left{display:flex;flex-direction:column;gap:14px;min-width:0}
+.stage{margin:0;position:relative;background:var(--stage);border:1px solid var(--line);border-radius:6px;overflow:hidden}
+#stage{display:block;width:100%;max-width:100%;aspect-ratio:4/3;touch-action:none;cursor:grab}
+.hint{position:absolute;left:12px;bottom:8px;margin:0;font-size:.75rem;color:var(--muted);pointer-events:none}
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:inherit;font-size:.9375rem;line-height:1;color:var(--ink);background:var(--paper);border:1px solid var(--line);
+  border-radius:6px;padding:10px 14px;cursor:pointer}
+.btn:hover{border-color:var(--muted)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.primary{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.legend{display:flex;flex-wrap:wrap;gap:4px 16px;margin:0 0 0 auto;padding:0;list-style:none;font-size:.8125rem;color:var(--muted)}
+.legend li{display:flex;align-items:center;gap:6px}
+.sw{width:14px;height:3px;border-radius:2px;background:var(--ink)}
+.sw.ball{background:var(--ball)} .sw.shadow{background:var(--shadow)} .sw.lamp{background:var(--lamp)}
+.controls{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center}
+.ctl{display:flex;align-items:center;gap:10px;font-size:.9375rem;flex:1 1 240px;min-width:0}
+.ctl span{white-space:nowrap}
+.ctl input{flex:1;min-width:0;accent-color:var(--ball)}
+.readout{margin:0;min-height:3.5em;font-size:.9375rem;font-variant-numeric:tabular-nums;color:var(--ink)}
+.readout .dim{color:var(--muted)}
+
+.panel{display:flex;flex-direction:column;gap:10px;min-width:0}
+.stepno{margin:0;font-size:.8125rem;color:var(--muted);letter-spacing:.1em;font-variant-numeric:tabular-nums}
+h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:1.75rem;line-height:1.3;text-wrap:balance}
+#st-body{display:flex;flex-direction:column;gap:10px;max-width:34rem}
+#st-body p{margin:0}
+.tip{margin:4px 0 0;padding-top:10px;border-top:1px dashed var(--line);font-size:.9375rem;color:var(--muted);max-width:34rem}
+
+.answer{border-top:1px solid var(--line);padding-top:28px;display:flex;flex-direction:column;gap:12px;max-width:44rem}
+.answer ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:8px}
+.answer p{margin:0}
+.source{font-size:.875rem;color:var(--muted)}
+
+@media (max-width:860px){
+  .bench{grid-template-columns:minmax(0,1fr);gap:22px}
+  #stage{aspect-ratio:1/1.05}
+  .legend{margin-left:0;width:100%}
+}
+@media (max-width:560px){
+  .step{padding:4px}
+  .step .lbl{display:none}
+  .step[aria-current="step"]{padding-right:12px}
+  .step[aria-current="step"] .lbl{display:inline}
+}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">一道题：三维空间能分割成圆吗？</p>
+    <h1>灯、玻璃球和影子</h1>
+    <p class="lede">在玻璃球的顶上点一盏灯，球面上的每个点都会在桌面上留下一个影子。数学里把这件事叫做球极投影。下面用七步动画把它看清楚，最后用它回答开头那道题。</p>
+  </header>
+
+  <nav class="steps" aria-label="步骤">
+    <div class="group">
+      <span class="group-label">认识球极投影</span>
+      <div class="group-row">
+        <button class="step" data-step="0"><span class="n">1</span><span class="lbl">灯和影子</span></button>
+        <button class="step" data-step="1"><span class="n">2</span><span class="lbl">越近越远</span></button>
+        <button class="step" data-step="2"><span class="n">3</span><span class="lbl">圆变圆</span></button>
+        <button class="step" data-step="3"><span class="n">4</span><span class="lbl">圆变直线</span></button>
+        <button class="step" data-step="4"><span class="n">5</span><span class="lbl">铺满球面</span></button>
+      </div>
+    </div>
+    <div class="group">
+      <span class="group-label">解开那道题</span>
+      <div class="group-row">
+        <button class="step" data-step="5"><span class="n">6</span><span class="lbl">一串圆</span></button>
+        <button class="step" data-step="6"><span class="n">7</span><span class="lbl">铺满空间</span></button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="bench">
+    <div class="left">
+      <figure class="stage">
+        <canvas id="stage" role="img" aria-label="球极投影的三维演示：玻璃球、球顶的灯和桌面上的影子"></canvas>
+        <figcaption class="hint">拖动圆点可以移动它，拖动空白处可以转动视角</figcaption>
+      </figure>
+      <div class="toolbar">
+        <button class="btn" id="prev">← 上一步</button>
+        <button class="btn" id="play">暂停</button>
+        <button class="btn primary" id="next">下一步 →</button>
+        <ul class="legend" id="legend"></ul>
+      </div>
+      <div class="controls">
+        <label class="ctl" id="ctl-rho3" hidden><span>圆的大小</span><input type="range" id="rho3" min="10" max="45" step="1" value="28"></label>
+        <label class="ctl" id="ctl-rho4" hidden><span>把圆推向灯</span><input type="range" id="rho4" min="18" max="82" step="0.5" value="22"></label>
+        <button class="btn" id="through" hidden>正好穿过灯</button>
+        <label class="ctl" id="ctl-rr" hidden><span>球面半径 <i class="m">r</i></span><input type="range" id="rr" min="0.4" max="6" step="0.05" value="1.3"></label>
+      </div>
+      <p class="readout" id="readout"></p>
+    </div>
+
+    <section class="panel" aria-live="polite">
+      <p class="stepno" id="st-no">第 1 步 · 共 7 步</p>
+      <h2 id="st-title">一盏灯，一个影子</h2>
+      <div id="st-body"></div>
+      <p class="tip" id="st-tip"></p>
+    </section>
+  </main>
+
+  <section class="answer">
+    <h2>三句话的答案</h2>
+    <ol>
+      <li><strong>摆一串圆。</strong>在一张平面上放一串半径为 1 的圆，圆心排成一行，坐标是 …、−7、−3、1、5、9、…。原点 <i class="m">O</i> 在圆心为 1 的那个圆上。</li>
+      <li><strong>每层球面恰好被碰到两次。</strong>以 <i class="m">O</i> 为球心、任意正数 <i class="m">r</i> 为半径的球面，和这串圆恰好有 2 个公共点。</li>
+      <li><strong>用球极投影铺满每层球面。</strong>把灯放在其中一个公共点上，在另一个公共点的影子周围画满同心圆，再把它们收回球面，这层球面剩下的部分就被互不相交的圆铺满了。</li>
+    </ol>
+    <p>空间里的每个点，要么是 <i class="m">O</i>，要么落在唯一的一层球面上，所以它恰好属于一个圆。答案是：能。</p>
+    <p class="source">这个构造出自 Andrzej Szulkin 1983 年发表在《美国数学月刊》上的短文 “ℝ³ is the union of disjoint circles”。</p>
+  </section>
+</div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const canvas=$('stage'), ctx=canvas.getContext('2d');
+const RAD=Math.PI/180, TAU=Math.PI*2;
+const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+const mul=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+const len=a=>Math.hypot(a[0],a[1],a[2]);
+const norm=a=>mul(a,1/(len(a)||1));
+const lerp=(a,b,t)=>a+(b-a)*t;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const smooth=t=>t*t*(3-2*t);
+const fmt=v=>(Math.abs(v)<0.005?0:v).toFixed(2).replace('-','−');
+
+/* ---------- colours follow the page theme ---------- */
+const COL={};
+function readColors(){
+  const cs=getComputedStyle(document.documentElement);
+  ['stage','paper','grid','ink','muted','ball','lamp','shadow'].forEach(k=>COL[k]=cs.getPropertyValue('--'+k).trim());
+}
+readColors();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',readColors);
+new MutationObserver(readColors).observe(document.documentElement,{attributes:true,attributeFilter:['data-theme']});
+
+/* ---------- canvas + camera ---------- */
+let W=1,H=1,DPR=1;
+function resize(){
+  const r=canvas.getBoundingClientRect();
+  DPR=Math.min(window.devicePixelRatio||1,2);
+  W=Math.max(1,r.width); H=Math.max(1,r.height);
+  canvas.width=Math.round(W*DPR); canvas.height=Math.round(H*DPR);
+}
+new ResizeObserver(resize).observe(canvas); resize();
+
+const cam={az:-65*RAD,el:20*RAD,d:30,hw:4.2,t:[0.6,0,0.7]};
+let camFrom=null,camTo=null,camT=1;
+let E,F,R,U,foc,cx,cy;
+function updateCam(){
+  const ce=Math.cos(cam.el);
+  E=[cam.t[0]+cam.d*ce*Math.cos(cam.az),cam.t[1]+cam.d*ce*Math.sin(cam.az),cam.t[2]+cam.d*Math.sin(cam.el)];
+  F=norm(sub(cam.t,E)); R=norm(cross(F,[0,0,1])); U=cross(R,F);
+  foc=(Math.min(W,H*1.25)/2)*cam.d/cam.hw; cx=W/2; cy=H/2;
+}
+function goCam(c,instant){
+  let daz=c.az*RAD-cam.az; daz=Math.atan2(Math.sin(daz),Math.cos(daz));
+  camFrom={az:cam.az,el:cam.el,d:cam.d,hw:cam.hw,t:cam.t.slice()};
+  camTo={az:cam.az+daz,el:c.el*RAD,d:c.d||30,hw:c.hw,t:c.t.slice()};
+  camT=instant?0.9999:0;
+}
+function stepCam(dt){
+  if(camT>=1) return;
+  camT=Math.min(1,camT+dt/0.9); const k=smooth(camT);
+  ['az','el','d','hw'].forEach(p=>cam[p]=lerp(camFrom[p],camTo[p],k));
+  cam.t=[0,1,2].map(i=>lerp(camFrom.t[i],camTo.t[i],k));
+}
+function toCam(p){const v=sub(p,E);return [dot(v,R),dot(v,U),dot(v,F)];}
+function proj(p){const c=toCam(p);return [cx+foc*c[0]/c[2],cy-foc*c[1]/c[2],c[2]];}
+function rayDir(sx,sy){const x=(sx-cx)/foc,y=-(sy-cy)/foc;return norm([F[0]+x*R[0]+y*U[0],F[1]+x*R[1]+y*U[1],F[2]+x*R[2]+y*U[2]]);}
+
+/* ---------- world ---------- */
+const SPH={c:[0,0,1],r:1,cut:false};          // the current sphere; cut = the plane slices through it
+let BOX={x0:-7,x1:7,y0:-7,y1:7};              // the sheet of graph paper
+const NP=[0,0,2], SP=[0,0,0];
+const onS=u=>[u[0],u[1],1+u[2]];
+const fromAngles=(th,ph)=>[Math.sin(th)*Math.cos(ph),Math.sin(th)*Math.sin(ph),-Math.cos(th)]; // th measured up from the south pole
+function st(p){const k=2-p[2]; if(k<1e-7) return null; return [2*p[0]/k,2*p[1]/k,0];}      // sphere -> table
+function stInv(q){const t=4/(q[0]*q[0]+q[1]*q[1]+4); return [t*q[0],t*q[1],2-2*t];}         // table -> sphere
+function capNorth(u){ if(u[2]>Math.cos(8*RAD)) return fromAngles(172*RAD,Math.atan2(u[1],u[0])); return u; }
+function limit(q,m){const r=Math.hypot(q[0],q[1]); return r>m?[q[0]*m/r,q[1]*m/r,0]:q;}
+function basis(a){const e1=Math.abs(a[2])>0.999?[1,0,0]:norm(cross([0,0,1],a)); return [e1,cross(a,e1)];}
+function sphCircle(a,rho,n){
+  const [e1,e2]=basis(a), c=Math.cos(rho), s=Math.sin(rho), out=[];
+  for(let i=0;i<n;i++){const t=i/n*TAU, ct=Math.cos(t), sn=Math.sin(t);
+    out.push([c*a[0]+s*(ct*e1[0]+sn*e2[0]), c*a[1]+s*(ct*e1[1]+sn*e2[1]), 1+c*a[2]+s*(ct*e1[2]+sn*e2[2])]);}
+  return out;
+}
+function flatCircle(c,r,n){const out=[];for(let i=0;i<n;i++){const t=i/n*TAU;out.push([c[0]+r*Math.cos(t),c[1]+r*Math.sin(t),0]);}return out;}
+function circum(a,b,c){
+  const d=2*(a[0]*(b[1]-c[1])+b[0]*(c[1]-a[1])+c[0]*(a[1]-b[1])); if(Math.abs(d)<1e-9) return null;
+  const a2=a[0]*a[0]+a[1]*a[1], b2=b[0]*b[0]+b[1]*b[1], c2=c[0]*c[0]+c[1]*c[1];
+  const ux=(a2*(b[1]-c[1])+b2*(c[1]-a[1])+c2*(a[1]-b[1]))/d, uy=(a2*(c[0]-b[0])+b2*(a[0]-c[0])+c2*(b[0]-a[0]))/d;
+  return {c:[ux,uy,0],r:Math.hypot(a[0]-ux,a[1]-uy)};
+}
+function hitTable(sx,sy){const D=rayDir(sx,sy); if(D[2]>-1e-4) return null; const t=-E[2]/D[2]; return [E[0]+t*D[0],E[1]+t*D[1],0];}
+function hitSphere(sx,sy){
+  const D=rayDir(sx,sy), oc=sub(E,SPH.c), b=dot(oc,D), c=dot(oc,oc)-1, disc=b*b-c;
+  const t=disc<0?-b:-b-Math.sqrt(disc);
+  return norm(sub(add(E,mul(D,t)),SPH.c));
+}
+
+/* ---------- drawing helpers ---------- */
+function stroke(color,w,alpha,dash){
+  ctx.strokeStyle=color; ctx.lineWidth=w; ctx.globalAlpha=alpha; ctx.lineCap='round'; ctx.lineJoin='round';
+  ctx.setLineDash(dash||[]); ctx.stroke(); ctx.setLineDash([]); ctx.globalAlpha=1;
+}
+function line3(a,b){                       // adds one 3-D segment to the current path, clipped at the camera
+  let pa=toCam(a), pb=toCam(b); const zn=1;
+  if(pa[2]<zn&&pb[2]<zn) return;
+  if(pa[2]<zn){const t=(zn-pa[2])/(pb[2]-pa[2]); pa=[lerp(pa[0],pb[0],t),lerp(pa[1],pb[1],t),zn];}
+  else if(pb[2]<zn){const t=(zn-pb[2])/(pa[2]-pb[2]); pb=[lerp(pb[0],pa[0],t),lerp(pb[1],pa[1],t),zn];}
+  ctx.moveTo(cx+foc*pa[0]/pa[2],cy-foc*pa[1]/pa[2]); ctx.lineTo(cx+foc*pb[0]/pb[2],cy-foc*pb[1]/pb[2]);
+}
+function clipSeg(a,b){                     // Liang–Barsky against the paper
+  let t0=0,t1=1; const dx=b[0]-a[0], dy=b[1]-a[1];
+  const p=[-dx,dx,-dy,dy], q=[a[0]-BOX.x0,BOX.x1-a[0],a[1]-BOX.y0,BOX.y1-a[1]];
+  for(let i=0;i<4;i++){
+    if(p[i]===0){ if(q[i]<0) return null; }
+    else{ const t=q[i]/p[i]; if(p[i]<0){ if(t>t1) return null; if(t>t0) t0=t; } else { if(t<t0) return null; if(t<t1) t1=t; } }
+  }
+  return [[a[0]+t0*dx,a[1]+t0*dy,0],[a[0]+t1*dx,a[1]+t1*dy,0]];
+}
+function tablePath(pts,closed){
+  const n=pts.length, m=closed?n:n-1;
+  for(let i=0;i<m;i++){const a=pts[i], b=pts[(i+1)%n]; if(!a||!b) continue;
+    const s=clipSeg(a,b); if(!s) continue; const pa=proj(s[0]), pb=proj(s[1]); ctx.moveTo(pa[0],pa[1]); ctx.lineTo(pb[0],pb[1]);}
+}
+function tableLine(pts,closed,color,w,alpha,dash){ctx.beginPath();tablePath(pts,closed);stroke(color,w,alpha,dash);}
+let PASS='front';
+function isFront(X){
+  if(SPH.cut&&X[2]<-1e-6) return false;
+  return dot(sub(X,SPH.c),sub(E,X))>0;
+}
+function sphLine(pts,closed,color,w,aF,aB){   // only draws the half that belongs to the current pass
+  const n=pts.length, m=closed?n:n-1; let on=false; ctx.beginPath();
+  for(let i=0;i<m;i++){const a=pts[i], b=pts[(i+1)%n];
+    const front=isFront([(a[0]+b[0])/2,(a[1]+b[1])/2,(a[2]+b[2])/2]);
+    if((PASS==='front')===front){ if(!on){const pa=proj(a);ctx.moveTo(pa[0],pa[1]);on=true;} const pb=proj(b);ctx.lineTo(pb[0],pb[1]); }
+    else on=false;}
+  if(PASS==='front') stroke(color,w,aF); else stroke(color,Math.max(1,w*0.75),aB);
+}
+function drawPaper(alpha){
+  const b=BOX, cs=[[b.x0,b.y0,0],[b.x1,b.y0,0],[b.x1,b.y1,0],[b.x0,b.y1,0]].map(proj);
+  ctx.beginPath(); cs.forEach((s,i)=>i?ctx.lineTo(s[0],s[1]):ctx.moveTo(s[0],s[1])); ctx.closePath();
+  ctx.globalAlpha=alpha; ctx.fillStyle=COL.paper; ctx.fill(); ctx.globalAlpha=1;
+  ctx.beginPath();
+  for(let x=Math.ceil(b.x0);x<=b.x1;x++) line3([x,b.y0,0],[x,b.y1,0]);
+  for(let y=Math.ceil(b.y0);y<=b.y1;y++) line3([b.x0,y,0],[b.x1,y,0]);
+  stroke(COL.grid,1,0.5);
+}
+function meridian(dir){const out=[],c=SPH.c,r=SPH.r;for(let i=0;i<72;i++){const t=i/72*TAU;out.push([c[0]+r*Math.cos(t)*dir[0],c[1]+r*Math.cos(t)*dir[1],c[2]+r*Math.sin(t)]);}return out;}
+function equator(){const out=[],c=SPH.c,r=SPH.r;for(let i=0;i<96;i++){const t=i/96*TAU;out.push([c[0]+r*Math.cos(t),c[1]+r*Math.sin(t),c[2]]);}return out;}
+function wire(){
+  sphLine(equator(),true,COL.ball,1,0.3,0.13);
+  sphLine(meridian([1,0,0]),true,COL.ball,1,0.3,0.13);
+  sphLine(meridian([0,1,0]),true,COL.ball,1,0.3,0.13);
+}
+function glass(){
+  const c=SPH.c,r=SPH.r,v=sub(E,c),D=len(v),w=mul(v,1/D);
+  const ctr=add(c,mul(w,r*r/D)), rad=r*Math.sqrt(1-r*r/(D*D)), [e1,e2]=basis(w);
+  ctx.beginPath();
+  for(let i=0;i<72;i++){const t=i/72*TAU,p=proj(add(ctr,add(mul(e1,rad*Math.cos(t)),mul(e2,rad*Math.sin(t))))); i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]);}
+  ctx.closePath(); ctx.globalAlpha=0.07; ctx.fillStyle=COL.ball; ctx.fill(); ctx.globalAlpha=1;
+  stroke(COL.ball,1.4,0.6);
+}
+function dot3(p,color,r,hollow,handle){
+  const s=proj(p); if(s[2]<1) return;
+  if(handle){ctx.beginPath();ctx.arc(s[0],s[1],r+6,0,TAU);ctx.globalAlpha=0.2;ctx.fillStyle=color;ctx.fill();ctx.globalAlpha=1;}
+  ctx.beginPath();ctx.arc(s[0],s[1],r,0,TAU);
+  if(hollow){ctx.fillStyle=COL.paper;ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=2.2;ctx.stroke();}
+  else{ctx.fillStyle=color;ctx.fill();ctx.strokeStyle=COL.paper;ctx.lineWidth=1.5;ctx.stroke();}
+}
+function lamp(p){
+  const s=proj(p); ctx.fillStyle=COL.lamp;
+  [[17,0.12],[10,0.24],[5,1]].forEach(([r,a])=>{ctx.beginPath();ctx.arc(s[0],s[1],r,0,TAU);ctx.globalAlpha=a;ctx.fill();});
+  ctx.globalAlpha=1;
+}
+function label(p,text,dx,dy,color,plain){
+  const s=proj(p); if(s[2]<1) return;
+  const size=W<480?15:18;
+  ctx.font=plain?('500 '+(size-4)+'px "Noto Sans SC","PingFang SC",sans-serif'):('italic 500 '+size+'px "STIX Two Text","Times New Roman",serif');
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.lineJoin='round';
+  ctx.lineWidth=4; ctx.strokeStyle=COL.paper; ctx.globalAlpha=0.9; ctx.strokeText(text,s[0]+dx,s[1]+dy);
+  ctx.globalAlpha=1; ctx.fillStyle=color||COL.ink; ctx.fillText(text,s[0]+dx,s[1]+dy);
+}
+function lightRay(to,alpha,w){ctx.beginPath();line3(NP,to);stroke(COL.lamp,w||1.6,alpha);}
+
+/* ---------- state shared by the scenes ---------- */
+let scene=0, clock=0, playing=!matchMedia('(prefers-reduced-motion: reduce)').matches;
+const hold=[false,false,false,false,false,false,false];
+const rho3=$('rho3'), rho4=$('rho4'), rr=$('rr');
+const TAU4=55;
+const K4=[[0,22],[3.2,55],[5.6,55],[8.2,80],[9,80],[11.6,55],[13.4,55],[16.6,22],[17.6,22]];
+function kf(keys,t){
+  const T=keys[keys.length-1][0]; t=((t%T)+T)%T;
+  for(let i=1;i<keys.length;i++) if(t<=keys[i][0]){const a=keys[i-1],b=keys[i];return lerp(a[1],b[1],smooth((t-a[0])/(b[0]-a[0])));}
+  return keys[0][1];
+}
+function world1(){SPH.c=[0,0,1];SPH.r=1;SPH.cut=false;BOX={x0:-7,x1:7,y0:-7,y1:7};}
+function world2(){SPH.c=[0,0,0];SPH.cut=true;BOX={x0:-10,x1:12,y0:-7,y1:7};}
+const CHAIN=[-7,-3,1,5,9];
+function holes(r){                          // where the sphere of radius r meets the chain of circles
+  const k=Math.round(r/2);
+  if(k>=1&&Math.abs(r-2*k)<1e-6) return {A:[r,0,0],B:[-r,0,0],deg:true};
+  const m=Math.floor(r/2), c=(m%2===0?1:-1)*(2*m+1);
+  const x0=(r*r+c*c-1)/(2*c), y0=Math.sqrt(Math.max(0,r*r-x0*x0));
+  return {A:[x0,y0,0],B:[x0,-y0,0],c,x0,deg:false};
+}
+function chainDraw(){CHAIN.forEach(c=>tableLine(flatCircle([c,0,0],1,72),true,COL.shadow,2.6,1));}
+function autoR(sc,dt,auto){
+  if(auto){sc.t+=dt; sc.r=3.2-2.6*Math.cos(0.2*sc.t+0.75); rr.value=sc.r;} else sc.r=+rr.value;
+  SPH.r=sc.r; sc.h=holes(sc.r);
+}
+
+const SC=[];
+/* 1 — one lamp, one shadow */
+SC.push({
+  cam:{az:-65,el:20,hw:4.2,t:[0.6,0,0.7]},
+  enter(){world1();this.t=0;this.trail=[];this.u=fromAngles(60*RAD,-1.2);},
+  resume(){this.trail=[];},
+  update(dt,auto){
+    if(auto){this.t+=dt;this.u=fromAngles((75+40*Math.sin(0.55*this.t-0.4))*RAD,-1.2+0.5*this.t+0.6*Math.sin(0.3*this.t));}
+    this.P=onS(this.u); this.Q=st(this.P);
+    const tr=this.trail,l=tr[tr.length-1];
+    if(!l||len(sub(l,this.P))>0.012){tr.push(this.P); if(tr.length>260) tr.shift();}
+  },
+  handles(){return [{id:'P',p:this.P},{id:'Q',p:this.Q}];},
+  drag(id,x,y){
+    if(id==='P') this.u=capNorth(hitSphere(x,y));
+    else{const q=hitTable(x,y); if(q) this.u=capNorth(sub(stInv(limit(q,40)),SPH.c));}
+  },
+  table(){
+    const tr=this.trail,n=tr.length;
+    for(let i=1;i<n;i++){const a=st(tr[i-1]),b=st(tr[i]); if(!a||!b) continue; ctx.beginPath();tablePath([a,b],false);stroke(COL.shadow,2.4,Math.pow(i/n,1.6)*0.9);}
+  },
+  sphere(){
+    const tr=this.trail,n=tr.length;
+    for(let i=1;i<n;i++){const a=tr[i-1],b=tr[i];
+      if((PASS==='front')!==isFront(b)) continue;
+      ctx.beginPath();line3(a,b);stroke(COL.ball,2.4,Math.pow(i/n,1.6)*(PASS==='front'?0.9:0.3));}
+  },
+  over(){
+    lightRay(this.Q,0.95); lamp(NP);
+    dot3(this.P,COL.ball,6,false,true); dot3(this.Q,COL.shadow,6,false,true);
+    label(NP,'N',0,-22); label(this.P,'P',16,-10,COL.ball); label(this.Q,'P′',4,22,COL.shadow);
+  },
+  readout(){const d=Math.hypot(this.Q[0],this.Q[1]);
+    return 'P 离桌面的高度：'+fmt(this.P[2])+'<br>影子 P′ 到球底的距离：'+fmt(d);}
+});
+/* 2 — nearer the lamp, farther the shadow (side view, similar triangles) */
+SC.push({
+  cam:{az:-90,el:7,hw:4.3,t:[2,0,0.8]},
+  enter(){world1();this.t=0;this.th=30*RAD;},
+  update(dt,auto){
+    if(auto){this.t+=dt;this.th=(86-56*Math.cos(0.45*this.t-0.9))*RAD;}
+    this.P=[Math.sin(this.th),0,1-Math.cos(this.th)]; this.Q=[2*Math.tan(this.th/2),0,0]; this.Hp=[0,0,this.P[2]];
+  },
+  handles(){return [{id:'P',p:this.P},{id:'Q',p:this.Q}];},
+  drag(id,x,y){
+    if(id==='P'){const u=hitSphere(x,y); this.th=clamp(Math.atan2(u[0],-u[2]),3*RAD,172*RAD);}
+    else{const q=hitTable(x,y); if(q) this.th=clamp(2*Math.atan(q[0]/2),3*RAD,172*RAD);}
+  },
+  table(){
+    for(let k=1;k<=7;k++){const q=[2*Math.tan(k*10*RAD),0,0]; if(q[0]<BOX.x1) dot3(q,COL.shadow,3);}
+    tableLine([SP,this.Q],false,COL.shadow,3,1);
+  },
+  sphere(){sphLine(meridian([1,0,0]),true,COL.ball,2,0.9,0.4);},
+  over(){
+    const tri=(a,b,c,al)=>{const s=[a,b,c].map(proj); if(s.some(p=>p[2]<1)) return;
+      ctx.beginPath();ctx.moveTo(s[0][0],s[0][1]);ctx.lineTo(s[1][0],s[1][1]);ctx.lineTo(s[2][0],s[2][1]);ctx.closePath();ctx.globalAlpha=al;ctx.fillStyle=COL.lamp;ctx.fill();ctx.globalAlpha=1;};
+    tri(NP,SP,this.Q,0.1); tri(NP,this.Hp,this.P,0.22);
+    for(let k=1;k<=8;k++){const t=k*20*RAD,p=[Math.sin(t),0,1-Math.cos(t)],q=[2*Math.tan(t/2),0,0];
+      if(q[0]<BOX.x1){ctx.beginPath();line3(NP,q);stroke(COL.lamp,1,0.3);} dot3(p,COL.ball,3);}
+    ctx.beginPath();line3(NP,SP);line3(this.Hp,this.P);stroke(COL.ink,1.2,0.7,[5,5]);
+    lightRay(this.Q,0.95,1.8); lamp(NP);
+    dot3(SP,COL.ink,3.5); dot3(this.Hp,COL.ink,3.5);
+    dot3(this.P,COL.ball,6,false,true); dot3(this.Q,COL.shadow,6,false,true);
+    label(NP,'N',-4,-22); label(SP,'S',-4,18); label(this.Hp,'H',-16,0);
+    label(this.P,'P',16,-8,COL.ball); label(this.Q,'P′',4,22,COL.shadow);
+  },
+  readout(){const hp=Math.sin(this.th),nh=1+Math.cos(this.th),k=Math.tan(this.th/2);
+    return '小三角形：HP ÷ NH = '+fmt(hp)+' ÷ '+fmt(nh)+' = <strong>'+fmt(k)+'</strong><br>大三角形：SP′ ÷ NS = '+fmt(2*k)+' ÷ 2 = <strong>'+fmt(k)+'</strong>';}
+});
+/* 3 — a circle casts a circle */
+SC.push({
+  cam:{az:-60,el:24,hw:4.7,t:[0.5,0,0.6]},
+  enter(){world1();this.t=0;this.a=fromAngles(55*RAD,-1);},
+  update(dt,auto){
+    if(auto){this.t+=dt;this.a=fromAngles((62+22*Math.sin(0.4*this.t-0.3))*RAD,-1+0.35*this.t);}
+    this.rho=+rho3.value*RAD; this.circ=sphCircle(this.a,this.rho,120); this.sh=this.circ.map(st);
+    const s=this.sh; this.cc=(s[0]&&s[40]&&s[80])?circum(s[0],s[40],s[80]):null; if(this.cc&&this.cc.r>60) this.cc=null;
+  },
+  handles(){return [{id:'A',p:onS(this.a)}];},
+  drag(id,x,y){this.a=capNorth(hitSphere(x,y));},
+  table(){
+    tableLine(this.sh,true,COL.shadow,3.2,1);
+    if(this.cc){const c=this.cc,w=clock*1.1,tip=[c.c[0]+c.r*Math.cos(w),c.c[1]+c.r*Math.sin(w),0];
+      tableLine(flatCircle(c.c,c.r,120),true,COL.ink,1.2,0.75,[4,5]);
+      tableLine([c.c,tip],false,COL.ink,1.4,0.85); dot3(c.c,COL.ink,3.5); dot3(tip,COL.ink,3);}
+  },
+  sphere(){sphLine(this.circ,true,COL.ball,3.2,1,0.4);},
+  over(){
+    ctx.beginPath(); for(let i=0;i<120;i+=6){const q=this.sh[i]; if(q&&Math.hypot(q[0],q[1])<12) line3(NP,q);} stroke(COL.lamp,1,0.34);
+    lamp(NP); dot3(onS(this.a),COL.ball,5,true,true); label(NP,'N',0,-22);
+  },
+  readout(){return this.cc?('影子圆的半径：<strong>'+fmt(this.cc.r)+'</strong><br><span class="dim">圆规的针尖转一整圈，始终压在红线上。</span>'):'影子太大，跑出纸面了。';}
+});
+/* 4 — through the lamp: the shadow opens into a line */
+SC.push({
+  cam:{az:-72,el:30,hw:6.2,t:[0.6,0,0.3]},
+  enter(){world1();this.t=0;rho4.value=22;},
+  update(dt,auto){
+    if(auto){this.t+=dt;this.rho=kf(K4,this.t);rho4.value=this.rho;} else this.rho=+rho4.value;
+    const tau=TAU4*RAD; this.circ=sphCircle([Math.sin(tau),0,Math.cos(tau)],this.rho*RAD,360); this.sh=this.circ.map(st);
+    this.isLine=Math.abs(this.rho-TAU4)<0.01;
+    if(!this.isLine){const x1=2/Math.tan((TAU4+this.rho)*RAD/2),x2=2/Math.tan((TAU4-this.rho)*RAD/2); this.R=Math.abs(x2-x1)/2;}
+  },
+  table(){tableLine(this.sh,true,COL.shadow,3.2,1);},
+  sphere(){sphLine(this.circ,true,COL.ball,3.2,1,0.4);},
+  over(){
+    ctx.beginPath(); for(let i=0;i<360;i+=12){const q=this.sh[i]; if(q&&Math.hypot(q[0],q[1])<10) line3(NP,q);} stroke(COL.lamp,1,0.3);
+    lamp(NP);
+    if(this.isLine){const s=proj(NP);ctx.beginPath();ctx.arc(s[0],s[1],13,0,TAU);stroke(COL.ball,2,1);}
+    label(NP,'N',0,-26); dot3(SP,COL.ink,3.5); label(SP,'S',-12,12);
+  },
+  readout(){
+    if(this.isLine) return '圆正好穿过 N：影子是<strong>一条直线</strong>。';
+    return '影子是圆，半径：<strong>'+fmt(this.R)+'</strong><br><span class="dim">'+(this.rho>TAU4?'灯在圆圈里面，影子圆把球底 S 围在中间。':'圆越靠近灯，影子圆越大。')+'</span>';
+  }
+});
+/* 5 — sphere minus two points, filled with circles */
+SC.push({
+  cam:{az:-62,el:27,hw:5.2,t:[0.2,0,0.45]},
+  enter(){world1();this.b=fromAngles(62*RAD,-95*RAD);},
+  update(){
+    this.B=onS(this.b); this.Bq=st(this.B);
+    const fr=(clock*0.22)%1; this.fr=fr; this.fam=[];
+    for(let k=-8;k<=8;k++){const e=k+fr,r=2*Math.pow(1.5,e),al=clamp((8.5-Math.abs(e-0.5))/2.5,0,1);
+      const tab=flatCircle(this.Bq,r,96); this.fam.push({tab,sph:tab.map(stInv),al,k});}
+  },
+  handles(){return [{id:'B',p:this.B},{id:'Q',p:this.Bq}];},
+  drag(id,x,y){
+    if(id==='B') this.b=capNorth(hitSphere(x,y));
+    else{const q=hitTable(x,y); if(q) this.b=sub(stInv(limit(q,6.5)),SPH.c);}
+  },
+  table(){this.fam.forEach(c=>tableLine(c.tab,true,COL.shadow,1.8,c.al*0.95));},
+  sphere(){this.fam.forEach(c=>sphLine(c.sph,true,COL.ball,1.8,c.al,c.al*0.3));},
+  over(){
+    const c=this.fam.find(c=>c.k===0);
+    ctx.beginPath(); for(let i=0;i<96;i+=8){const q=c.tab[i]; if(Math.hypot(q[0],q[1])<9) line3(NP,q);} stroke(COL.lamp,1,0.4*Math.sin(Math.PI*this.fr));
+    lightRay(this.Bq,0.9); lamp(NP);
+    dot3(this.B,COL.ball,6,true,true); dot3(this.Bq,COL.shadow,6,true,true);
+    label(NP,'N',0,-22); label(this.B,'B',16,-10,COL.ball); label(this.Bq,'B′',4,22,COL.shadow);
+  },
+  readout(){return '<span class="dim">空心圆点表示被去掉的点。红圈从 B′ 向外扩散，对应的蓝圈从 B 一路滑向 N。</span>';}
+});
+/* 6 — a chain of circles meets every sphere twice */
+SC.push({
+  cam:{az:-90,el:62,hw:9.6,d:40,t:[1,0,0]},
+  enter(){world2();this.t=0;},
+  update(dt,auto){autoR(this,dt,auto);},
+  table(){
+    ctx.beginPath();line3([BOX.x0,0,0],[BOX.x1,0,0]);stroke(COL.ink,1,0.4);
+    [2,4,6,8].forEach(r=>tableLine(flatCircle([0,0,0],r,120),true,COL.ink,1,0.4,[3,6]));
+    chainDraw();
+    CHAIN.forEach(c=>{dot3([c,0,0],COL.ink,2.5);label([c,0,0],String(c).replace('-','−'),0,14,COL.ink,true);});
+    tableLine(flatCircle([0,0,0],this.r,120),true,COL.ball,3,1);
+    tableLine([[0,0,0],this.h.A],false,COL.ink,1.2,0.8,[4,4]);
+  },
+  over(){
+    dot3([0,0,0],COL.ink,4); label([0,0,0],'O',-12,-12);
+    dot3(this.h.A,COL.lamp,6.5); dot3(this.h.B,COL.lamp,6.5);
+    label(this.h.A,'A',14,-12); label(this.h.B,'B',14,14);
+    label(mul(this.h.A,0.5),'r',-10,-10);
+  },
+  readout(){
+    const r=this.r,h=this.h;
+    if(h.deg) return 'r = '+fmt(r)+'：球面同时碰到左右两个红圆，各 1 个点，还是 <strong>2 个</strong>公共点。';
+    return 'r = '+fmt(r)+'：<strong>2 个</strong>公共点 A、B，都在圆心为 '+String(h.c).replace('-','−')+' 的红圆上。<br><span class="dim">这个红圆上的点到 O 的距离在 '+(Math.abs(h.c)-1)+' 和 '+(Math.abs(h.c)+1)+' 之间。</span>';
+  }
+});
+/* 7 — every sphere is filled, so space is filled */
+SC.push({
+  cam:{az:-68,el:27,hw:8.6,d:40,t:[0.6,0,0]},
+  enter(){world2();this.t=0;},
+  update(dt,auto){
+    autoR(this,dt,auto);
+    const r=this.r,h=this.h,fr=(clock*0.18)%1,n=13; this.fam=[];
+    for(let i=0;i<n;i++){
+      const s=(i+fr)/n, al=clamp(Math.min(s,1-s)*7,0,1); let ctr,rho,e1;
+      if(h.deg){const xc=r*Math.cos(Math.PI*s); ctr=[xc,0,0]; rho=Math.sqrt(Math.max(0,r*r-xc*xc)); e1=[0,1,0];}
+      else{const p0=Math.acos(clamp(Math.abs(h.x0)/r,-1,1)), psi=p0+(Math.PI-2*p0)*s, nx=Math.cos(psi), ny=Math.sin(psi), dn=(r*r/h.x0)*nx;
+        ctr=[dn*nx,dn*ny,0]; rho=Math.sqrt(Math.max(0,r*r-dn*dn)); e1=[-ny,nx,0];}
+      const pts=[]; for(let j=0;j<72;j++){const t=j/72*TAU; pts.push([ctr[0]+rho*Math.cos(t)*e1[0],ctr[1]+rho*Math.cos(t)*e1[1],rho*Math.sin(t)]);}
+      this.fam.push({pts,al});
+    }
+  },
+  table(){
+    ctx.beginPath();line3([BOX.x0,0,0],[BOX.x1,0,0]);stroke(COL.ink,1,0.3);
+    chainDraw();
+  },
+  sphere(){this.fam.forEach(c=>sphLine(c.pts,true,COL.ball,2,c.al,c.al*0.3));},
+  over(){
+    dot3([0,0,0],COL.ink,4); label([0,0,0],'O',-12,-12);
+    dot3(this.h.A,COL.lamp,6,true); dot3(this.h.B,COL.lamp,6,true);
+    label(this.h.A,'A',14,-12); label(this.h.B,'B',14,14);
+  },
+  readout(){return 'r = '+fmt(this.r)+' 的这一层：去掉 A、B 两点，其余部分被蓝圆铺满。<br><span class="dim">拖动滑块换一层看看，每一层都一样。</span>';}
+});
+
+/* ---------- words for each step ---------- */
+const M=s=>'<i class="m">'+s+'</i>';
+const L1=[['ball','球面上的点和圆'],['shadow','桌面上的影子'],['lamp','灯光']];
+const L2=[['shadow','平面上的那串圆'],['ball','球面和球面上的圆'],['lamp','两个公共点']];
+const STEPS=[
+ {title:'一盏灯，一个影子',legend:L1,ctl:[],
+  body:`<p>把一个玻璃球放在桌面上，在球的最高点 ${M('N')} 点亮一盏小灯。</p>
+<p>在球面上任取一点 <b class="c-ball">${M('P')}</b>。<span class="c-lamp">灯光</span>从 ${M('N')} 出发，穿过 ${M('P')}，落在桌面上的 <b class="c-shadow">${M('P′')}</b>。${M('P′')} 就是 ${M('P')} 的影子。</p>
+<p>用这种办法把球面上的点一个个搬到平面上，就叫<strong>球极投影</strong>。</p>`,
+  tip:'试一试：拖动蓝点在球面上画画，或者拖动红点，看另一个点怎么跟着走。'},
+ {title:'离灯越近，影子越远',legend:L1,ctl:[],
+  body:`<p>换到侧面看。${M('P')} 在球底 ${M('S')} 时，影子就在原地。${M('P')} 越往上爬，光线越平，影子跑得越远。球面上间隔相等的小蓝点，影子的间隔越来越大。</p>
+<p>影子的位置可以用相似三角形算出来。直角三角形 ${M('NHP')} 和 ${M('NSP′')} 共用 ${M('N')} 处的角，形状相同，所以对应边的比相等。</p>
+<p>${M('P')} 爬到 ${M('N')} 时，光线和桌面平行，永远落不到桌面上。${M('N')} 是球面上唯一没有影子的点。除了它，球面上的点和桌面上的点一一对应。</p>`,
+  tip:'试一试：沿着球面拖动蓝点，下面两个比值始终相等。'},
+ {title:'圆的影子还是圆',legend:L1,ctl:['ctl-rho3'],
+  body:`<p>在球面上画一个<b class="c-ball">圆</b>，让灯光把它整个照到桌面上。</p>
+<p><b class="c-shadow">影子</b>被放大了，位置也偏了，可它依然是一个标准的圆。用圆规检验一下：虚线是圆规画出的圆，红色的影子和它完全重合。</p>
+<p>这是球极投影最重要的性质：<strong>球面上的圆，影子还是圆。</strong>严格的证明要用到相似三角形，这里先相信眼睛。</p>`,
+  tip:'试一试：拖动球面上的空心圆点移动这个圆，用滑块改变它的大小。'},
+ {title:'穿过灯的圆，影子是直线',legend:L1,ctl:['ctl-rho4','through'],
+  body:`<p>上一步有一个例外。把圆慢慢推向灯：圆上离灯最近的点，影子跑得最远，所以影子圆越来越大。</p>
+<p>当圆正好穿过 ${M('N')} 时，${M('N')} 没有影子，影子圆在无穷远处断开，变成一条<strong>直线</strong>。可以把直线看成半径无穷大的圆。</p>
+<p>继续推，灯被圈进圆里，影子又变回圆，这次它把球底围在了中间。</p>`,
+  tip:'试一试：拖动滑块，找到影子刚好变直的那一刻。'},
+ {title:'去掉两个点的球面，能用圆铺满',legend:L1,ctl:[],
+  body:`<p>现在用这个性质办一件事。在球面上去掉两个点：灯所在的 ${M('N')}，和另一个点 ${M('B')}。剩下的球面，能不能用互不相交的圆一点不漏地铺满？</p>
+<p>先看桌面。桌面去掉 ${M('B')} 的影子 ${M('B′')} 以后很好铺：以 ${M('B′')} 为圆心画<b class="c-shadow">同心圆</b>，像水波一样一圈套一圈。</p>
+<p>每个红圈都是球面上一个<b class="c-ball">蓝圈</b>的影子。点和影子一一对应，所以红圈铺满了桌面，蓝圈也就铺满了球面，而且互不相交。</p>`,
+  tip:'试一试：拖动 B 或 B′，给第二个洞换个位置。'},
+ {title:'一串圆，碰每层球面两次',legend:L2,ctl:['ctl-rr'],
+  body:`<p>回到开头的题目：能不能用互不相交的圆，把整个三维空间填满？</p>
+<p>在一张平面上摆一串<b class="c-shadow">红圆</b>，半径都是 1，圆心排成一行，位置是 …、−7、−3、1、5、9、…，每隔 4 放一个。原点 ${M('O')} 在圆心为 1 的那个圆上。</p>
+<p>以 ${M('O')} 为球心吹一个半径为 ${M('r')} 的<b class="c-ball">球面</b>。不管 ${M('r')} 多大，它和这串红圆恰好有 <strong>2 个</strong>公共点。原因画在虚线圈上：圆心为 1 的红圆占着到 ${M('O')} 距离 0 到 2 的位置，圆心为 −3 的占着 2 到 4，圆心为 5 的占着 4 到 6，一段接一段，不重也不漏。</p>`,
+  tip:'试一试：拖动滑块改变 r。把 r 调到 2 或 4，看看会发生什么。'},
+ {title:'一层一层，铺满整个空间',legend:L2,ctl:['ctl-rr'],
+  body:`<p>每一层球面都被红圆占去两个点 ${M('A')}、${M('B')}，相当于去掉了两个点。</p>
+<p>第 5 步说过怎么办：把灯放在 ${M('A')} 做球极投影，剩下的球面就能用互不相交的<b class="c-ball">蓝圆</b>铺满。</p>
+<p>所有以 ${M('O')} 为球心的球面像洋葱一样层层相套，填满了整个空间。所以空间里的每个点，要么在红圆上，要么在某一层球面的某个蓝圆上，而且只属于一个圆。</p>
+<p><strong>答案：能。三维空间可以分割成圆。</strong></p>`,
+  tip:'拖动空白处转一转，从各个方向看这层球面。'}
+];
+const CTLS=['ctl-rho3','ctl-rho4','through','ctl-rr'];
+const playBtn=$('play'), readoutEl=$('readout');
+let lastReadout='';
+function syncPlay(){playBtn.textContent=(playing&&!hold[scene])?'暂停':'播放';}
+function setScene(i,instant){
+  scene=clamp(i,0,SC.length-1); hold[scene]=false;
+  const sc=SC[scene], s=STEPS[scene];
+  sc.enter(); goCam(sc.cam,instant||!playing);
+  $('st-no').textContent='第 '+(scene+1)+' 步 · 共 '+SC.length+' 步';
+  $('st-title').textContent=s.title; $('st-body').innerHTML=s.body; $('st-tip').textContent=s.tip;
+  $('legend').innerHTML=s.legend.map(l=>'<li><span class="sw '+l[0]+'"></span>'+l[1]+'</li>').join('');
+  CTLS.forEach(id=>$(id).hidden=!s.ctl.includes(id));
+  document.querySelectorAll('.step').forEach(b=>{ if(+b.dataset.step===scene) b.setAttribute('aria-current','step'); else b.removeAttribute('aria-current'); });
+  $('prev').disabled=scene===0; $('next').disabled=scene===SC.length-1;
+  syncPlay();
+}
+document.querySelectorAll('.step').forEach(b=>b.addEventListener('click',()=>setScene(+b.dataset.step)));
+$('prev').addEventListener('click',()=>setScene(scene-1));
+$('next').addEventListener('click',()=>setScene(scene+1));
+playBtn.addEventListener('click',()=>{
+  if(playing&&!hold[scene]) playing=false;
+  else{playing=true; if(hold[scene]){hold[scene]=false; const sc=SC[scene]; if(sc.resume) sc.resume();}}
+  syncPlay();
+});
+[rho4,rr].forEach(el=>el.addEventListener('input',()=>{hold[scene]=true;syncPlay();}));
+$('through').addEventListener('click',()=>{rho4.value=TAU4;hold[scene]=true;syncPlay();});
+document.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  if(e.key==='ArrowRight') setScene(scene+1); else if(e.key==='ArrowLeft') setScene(scene-1);
+});
+
+/* ---------- pointer: drag a dot, or drag empty space to orbit ---------- */
+let drag=null;
+const ptr=e=>{const r=canvas.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+function pick(x,y,reach){
+  const sc=SC[scene]; if(!sc.handles) return null; let best=null;
+  sc.handles().forEach(h=>{if(!h.p) return; const s=proj(h.p), d=Math.hypot(s[0]-x,s[1]-y); if(d<reach){reach=d;best=h;}});
+  return best;
+}
+canvas.addEventListener('pointerdown',e=>{
+  const [x,y]=ptr(e), h=pick(x,y,e.pointerType==='touch'?34:22);
+  canvas.setPointerCapture(e.pointerId); camT=1;
+  if(h){drag={kind:'h',id:h.id}; hold[scene]=true; syncPlay();}
+  else drag={kind:'cam',x,y};
+  canvas.style.cursor='grabbing'; e.preventDefault();
+});
+canvas.addEventListener('pointermove',e=>{
+  const [x,y]=ptr(e);
+  if(!drag){canvas.style.cursor=pick(x,y,22)?'pointer':'grab'; return;}
+  if(drag.kind==='h') SC[scene].drag(drag.id,x,y);
+  else{cam.az-=(x-drag.x)*0.008; cam.el=clamp(cam.el+(y-drag.y)*0.006,3*RAD,88*RAD); drag.x=x; drag.y=y;}
+});
+const endDrag=()=>{drag=null;canvas.style.cursor='grab';};
+canvas.addEventListener('pointerup',endDrag); canvas.addEventListener('pointercancel',endDrag);
+
+/* ---------- frame ---------- */
+let last=0;
+function frame(ts){
+  const dt=Math.min(0.05,(ts-last)/1000||0); last=ts;
+  if(playing) clock+=dt;
+  stepCam(dt); updateCam();
+  const sc=SC[scene];
+  sc.update(playing?dt:0, playing&&!hold[scene]&&!(drag&&drag.kind==='h'));
+  ctx.setTransform(DPR,0,0,DPR,0,0); ctx.clearRect(0,0,W,H);
+  if(SPH.cut){PASS='back';wire();if(sc.sphere)sc.sphere();drawPaper(0.72);if(sc.table)sc.table();}
+  else{drawPaper(1);if(sc.table)sc.table();PASS='back';wire();if(sc.sphere)sc.sphere();}
+  glass(); PASS='front'; wire(); if(sc.sphere)sc.sphere(); if(sc.over)sc.over();
+  const html=sc.readout?sc.readout():'';
+  if(html!==lastReadout){readoutEl.innerHTML=html;lastReadout=html;}
+  requestAnimationFrame(frame);
+}
+const startAt=parseInt(location.hash.slice(1),10);       // #1 … #7 opens that step
+setScene(startAt>=1&&startAt<=SC.length?startAt-1:0,true);
+if(document.fonts&&document.fonts.load) document.fonts.load('italic 500 18px "STIX Two Text"');
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
