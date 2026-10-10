@@ -42,10 +42,13 @@ body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-siz
 .m{font-family:var(--font-math);font-style:italic;font-weight:500;font-size:1.08em;line-height:1}
 .c-ball{color:var(--ball)} .c-shadow{color:var(--shadow)} .c-lamp{color:var(--lamp-ink);font-weight:500}
 
-.masthead{display:flex;flex-direction:column;gap:6px;max-width:46rem}
+.masthead{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:20px 48px;align-items:start}
+.question{display:flex;flex-direction:column;gap:10px;min-width:0}
 .eyebrow{margin:0;font-size:.875rem;color:var(--muted);letter-spacing:.06em}
-h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(2rem,5.4vw,3.1rem);line-height:1.2;text-wrap:balance}
-.lede{margin:6px 0 0;color:var(--muted)}
+h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(2rem,4.6vw,2.75rem);line-height:1.2}
+h1 span{white-space:nowrap}
+.lede{margin:0;color:var(--muted)}
+.bridge{grid-column:1/-1;margin:0;color:var(--muted)}
 
 .steps{display:flex;flex-wrap:wrap;gap:12px 32px}
 .group{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -89,13 +92,15 @@ h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:1.75rem;li
 #st-body p{margin:0}
 .tip{margin:4px 0 0;padding-top:10px;border-top:1px dashed var(--line);font-size:.9375rem;color:var(--muted);max-width:34rem}
 
-.answer{border-top:1px solid var(--line);padding-top:28px;display:flex;flex-direction:column;gap:12px;max-width:44rem}
+.answer{display:flex;flex-direction:column;gap:10px;min-width:0}
+.answer h2{font-size:1.375rem}
 .answer ol{margin:0;padding-left:1.4em;display:flex;flex-direction:column;gap:8px}
 .answer p{margin:0}
-.source{font-size:.875rem;color:var(--muted)}
+.source{margin:0;border-top:1px solid var(--line);padding-top:20px;font-size:.875rem;color:var(--muted)}
 
 @media (max-width:860px){
   .bench{grid-template-columns:minmax(0,1fr);gap:22px}
+  .masthead{grid-template-columns:minmax(0,1fr)}
   #stage{aspect-ratio:1/1.05}
   .legend{margin-left:0;width:100%}
 }
@@ -111,9 +116,21 @@ h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:1.75rem;li
 <body>
 <div class="wrap">
   <header class="masthead">
-    <p class="eyebrow">一道题：三维空间能分割成圆吗？</p>
-    <h1>灯、玻璃球和影子</h1>
-    <p class="lede">在玻璃球的顶上点一盏灯，球面上的每个点都会在桌面上留下一个影子。数学里把这件事叫做球极投影。下面用七步动画把它看清楚，最后用它回答开头那道题。</p>
+    <div class="question">
+      <p class="eyebrow">一道数学题</p>
+      <h1><span>三维空间</span><span>能分割成圆吗？</span></h1>
+      <p class="lede">题目的意思是，能不能找到一族半径大于 0 的圆，它们两两不相交，又让空间里的每个点都恰好落在其中一个圆上？</p>
+    </div>
+    <section class="answer">
+      <h2>三句话的答案</h2>
+      <ol>
+        <li><strong>摆一串圆。</strong>在一张平面上放一串半径为 1 的圆，圆心排成一行，坐标是 …、−7、−3、1、5、9、…。原点 <i class="m">O</i> 在圆心为 1 的那个圆上。</li>
+        <li><strong>每层球面恰好被碰到两次。</strong>以 <i class="m">O</i> 为球心、任意正数 <i class="m">r</i> 为半径的球面，和这串圆恰好有 2 个公共点。</li>
+        <li><strong>用球极投影铺满每层球面。</strong>把灯放在其中一个公共点上，在另一个公共点的影子周围画满同心圆，再把它们收回球面，这层球面剩下的部分就被互不相交的圆铺满了。</li>
+      </ol>
+      <p>空间里的每个点，要么是 <i class="m">O</i>，要么落在唯一的一层球面上，所以它恰好属于一个圆。答案是：能。</p>
+    </section>
+    <p class="bridge">第三句里的“灯”和“影子”说的是球极投影。下面的动画用前 5 步把它讲清楚，再用后 2 步把这三句话演示一遍。</p>
   </header>
 
   <nav class="steps" aria-label="步骤">
@@ -165,16 +182,7 @@ h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:1.75rem;li
     </section>
   </main>
 
-  <section class="answer">
-    <h2>三句话的答案</h2>
-    <ol>
-      <li><strong>摆一串圆。</strong>在一张平面上放一串半径为 1 的圆，圆心排成一行，坐标是 …、−7、−3、1、5、9、…。原点 <i class="m">O</i> 在圆心为 1 的那个圆上。</li>
-      <li><strong>每层球面恰好被碰到两次。</strong>以 <i class="m">O</i> 为球心、任意正数 <i class="m">r</i> 为半径的球面，和这串圆恰好有 2 个公共点。</li>
-      <li><strong>用球极投影铺满每层球面。</strong>把灯放在其中一个公共点上，在另一个公共点的影子周围画满同心圆，再把它们收回球面，这层球面剩下的部分就被互不相交的圆铺满了。</li>
-    </ol>
-    <p>空间里的每个点，要么是 <i class="m">O</i>，要么落在唯一的一层球面上，所以它恰好属于一个圆。答案是：能。</p>
-    <p class="source">这个构造出自 Andrzej Szulkin 1983 年发表在《美国数学月刊》上的短文 “ℝ³ is the union of disjoint circles”。</p>
-  </section>
+  <p class="source">这个构造出自 Andrzej Szulkin 1983 年发表在《美国数学月刊》上的短文 “ℝ³ is the union of disjoint circles”。</p>
 </div>
 
 <script>
