@@ -501,11 +501,11 @@ SC.push({
     ctx.beginPath(); for(let i=0;i<360;i+=12){const q=this.sh[i]; if(q&&Math.hypot(q[0],q[1])<10) line3(NP,q);} stroke(COL.lamp,1,0.3);
     lamp(NP);
     if(this.isLine){const s=proj(NP);ctx.beginPath();ctx.arc(s[0],s[1],13,0,TAU);stroke(COL.ball,2,1);}
-    label(NP,'N',0,-26); dot3(SP,COL.ink,3.5); label(SP,'S',-12,12);
+    label(NP,'N',0,-26);
   },
   readout(){
     if(this.isLine) return '圆正好穿过 N：影子是<strong>一条直线</strong>。';
-    return '影子是圆，半径：<strong>'+fmt(this.R)+'</strong><br><span class="dim">'+(this.rho>TAU4?'灯在圆圈里面，影子圆把球底 S 围在中间。':'圆越靠近灯，影子圆越大。')+'</span>';
+    return '影子是圆，半径：<strong>'+fmt(this.R)+'</strong><br><span class="dim">'+(this.rho>TAU4?'灯在圆圈里面，影子圆把球底围在中间。':'圆越靠近灯，影子圆越大。')+'</span>';
   }
 });
 /* 5 — sphere minus two points, filled with circles */
