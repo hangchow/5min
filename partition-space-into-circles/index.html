@@ -90,6 +90,7 @@ button:focus-visible,input:focus-visible{outline:2px solid var(--ball);outline-o
 h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:1.75rem;line-height:1.3;text-wrap:balance}
 #st-body{display:flex;flex-direction:column;gap:10px;max-width:34rem}
 #st-body p{margin:0}
+#st-body .note{font-size:.9375rem;color:var(--muted)}
 .tip{margin:4px 0 0;padding-top:10px;border-top:1px dashed var(--line);font-size:.9375rem;color:var(--muted);max-width:34rem}
 
 .answer{display:flex;flex-direction:column;gap:10px;min-width:0}
@@ -596,7 +597,8 @@ const STEPS=[
  {title:'一盏灯，一个影子',legend:L1,ctl:[],
   body:`<p>把一个玻璃球放在桌面上，在球的最高点 ${M('N')} 点亮一盏小灯。</p>
 <p>在球面上任取一点 <b class="c-ball">${M('P')}</b>。<span class="c-lamp">灯光</span>从 ${M('N')} 出发，穿过 ${M('P')}，落在桌面上的 <b class="c-shadow">${M('P′')}</b>。${M('P′')} 就是 ${M('P')} 的影子。</p>
-<p>用这种办法把球面上的点一个个搬到平面上，就叫<strong>球极投影</strong>。</p>`,
+<p>用这种办法把球面上的点一个个搬到平面上，就叫<strong>球极投影</strong>。</p>
+<p class="note">桌面不一定要贴着球。换成任何一张与它平行、又不经过灯的平面都行，比如穿过球心的，或者离球更远的。所有影子只是整体放大或缩小，后面讲的性质都不变。</p>`,
   tip:'试一试：拖动蓝点在球面上画画，或者拖动红点，看另一个点怎么跟着走。'},
  {title:'离灯越近，影子越远',legend:L1,ctl:[],
   body:`<p>换到侧面看。${M('P')} 在球底 ${M('S')} 时，影子就在原地。${M('P')} 越往上爬，光线越平，影子跑得越远。球面上间隔相等的小蓝点，影子的间隔越来越大。</p>
@@ -621,11 +623,13 @@ const STEPS=[
  {title:'一串圆，碰每层球面两次',legend:L2,ctl:['ctl-rr'],
   body:`<p>回到开头的题目：能不能用互不相交的圆，把整个三维空间填满？</p>
 <p>在一张平面上摆一串<b class="c-shadow">红圆</b>，半径都是 1，圆心排成一行，位置是 …、−7、−3、1、5、9、…，每隔 4 放一个。原点 ${M('O')} 在圆心为 1 的那个圆上。</p>
+<p class="note">别和前面的桌面弄混。这张平面只是用来摆红圆的，它从球心穿过，不是投影用的平面。</p>
 <p>以 ${M('O')} 为球心吹一个半径为 ${M('r')} 的<b class="c-ball">球面</b>。不管 ${M('r')} 多大，它和这串红圆恰好有 <strong>2 个</strong>公共点。原因画在虚线圈上：圆心为 1 的红圆占着到 ${M('O')} 距离 0 到 2 的位置，圆心为 −3 的占着 2 到 4，圆心为 5 的占着 4 到 6，一段接一段，不重也不漏。</p>`,
   tip:'试一试：拖动滑块改变 r。把 r 调到 2 或 4，看看会发生什么。'},
  {title:'一层一层，铺满整个空间',legend:L2,ctl:['ctl-rr'],
   body:`<p>每一层球面都被红圆占去两个点 ${M('A')}、${M('B')}，相当于去掉了两个点。</p>
 <p>第 5 步说过怎么办：把灯放在 ${M('A')} 做球极投影，剩下的球面就能用互不相交的<b class="c-ball">蓝圆</b>铺满。</p>
+<p class="note">图里那张平面仍然只是摆红圆用的。以 ${M('A')} 为灯做投影时，用的是另一张与 ${M('OA')} 垂直的平面，图里没有画出来，只画了收回球面之后的蓝圆。</p>
 <p>所有以 ${M('O')} 为球心的球面像洋葱一样层层相套，填满了整个空间。所以空间里的每个点，要么在红圆上，要么在某一层球面的某个蓝圆上，而且只属于一个圆。</p>
 <p><strong>答案：能。三维空间可以分割成圆。</strong></p>`,
   tip:'拖动空白处转一转，从各个方向看这层球面。'}
